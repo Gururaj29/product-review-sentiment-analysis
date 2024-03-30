@@ -1,6 +1,8 @@
 import os
 from utils import constants
 import pathlib
+import numpy as np
+import pandas as pd
 
 def get_data_filepath(dataset, train=True, feature=None, max_rows=None):
     filename = "train.csv" if train else "test.csv"
@@ -11,3 +13,6 @@ def get_data_filepath(dataset, train=True, feature=None, max_rows=None):
 
 def get_all_features():
     return {constants.FeatureCountVectorizer, constants.FeatureGloVe, constants.FeatureTFIDF}
+
+def split_train_data(train_df, split_percent=0.8):
+    return np.split(train_df.sample(frac=1, random_state=42), [int(split_percent*len(train_df))])
