@@ -3,31 +3,37 @@ import pandas as pd
 import os
 from utils import utils
 
-def load_raw_data(dataset, root_path=None):
+def load_raw_data(dataset, root_path=None, binary_labels=True):
     if dataset == constants.DatasetAmazon:
         return load_amazon_raw_data(root_path=root_path)
     if dataset == constants.DatasetYelp:
-        return load_yelp_raw_data(root_path=root_path)
+        return load_yelp_raw_data(root_path=root_path, binary_labels=binary_labels)
     return None, None
 
-def load_amazon_raw_data(root_path=None):
+def load_amazon_raw_data(root_path=None, binary_labels=True):
     train_data_path, test_data_path = utils.get_data_filepath(constants.DatasetAmazon, train=True, root_path=root_path), utils.get_data_filepath(constants.DatasetAmazon, train=False, root_path=root_path)
-    return load_amazon_raw_data_from_path(train_data_path), load_amazon_raw_data_from_path(test_data_path)
+    return load_amazon_raw_data_from_path(train_data_path, binary_labels=binary_labels), load_amazon_raw_data_from_path(test_data_path, binary_labels=binary_labels)
 
 def load_yelp_raw_data(root_path=None):
     train_data_path, test_data_path = utils.get_data_filepath(constants.DatasetYelp, train=True, root_path=root_path), utils.get_data_filepath(constants.DatasetYelp, train=False, root_path=root_path)
     return load_yelp_raw_data_from_path(train_data_path), load_yelp_raw_data_from_path(test_data_path)
 
-def load_amazon_raw_data_from_path(file_path):
+def load_amazon_raw_data_from_path(file_path, binary_labels=True):
     data_df = pd.read_csv(file_path, names=["Rating", "Title", "Review"])
     data_df = pd.concat([data_df["Rating"], data_df["Title"] + "" + data_df["Review"]], axis=1).rename(columns={"Rating": constants.ColumnLabel, 0: constants.ColumnData})
-    return data_df.dropna()
+    data_df.dropna()
+    if binary_labels:
+        labels = utils.get_labels()
+        positive_label, negative_label = labels[constants.LabelPositive], labels[constants.LabelNegative]
+        label_substitutions = {1: negative_label, 2: negative_label, 3: positive_label, 4: positive_label, 5: positive_label}
+        data_df[constants.ColumnLabel].replace(label_substitutions, inplace=True)
+    return data_df
 
 def load_yelp_raw_data_from_path(file_path):
     data_df = pd.read_csv(file_path, dtype={"review_text": str, "class_index": int}).rename(columns={'class_index': constants.ColumnLabel, 'review_text': constants.ColumnData})
     return data_df.dropna()
 
-def load_feature(dataset, feature, max_rows=None, binary_labels=False, root_path=None):
+def load_feature(dataset, feature, max_rows=None, binary_labels=True, root_path=None):
     if max_rows is not None:
         train_df, test_df = pd.read_csv(utils.get_data_filepath(dataset, feature=feature, max_rows=max_rows, train=True, root_path=root_path))[:max_rows], pd.read_csv(utils.get_data_filepath(dataset, feature=feature, max_rows=max_rows, train=False, root_path=root_path))[:max_rows]
     else:
@@ -37,11 +43,11 @@ def load_feature(dataset, feature, max_rows=None, binary_labels=False, root_path
         labels = utils.get_labels()
         positive_label, negative_label = labels[constants.LabelPositive], labels[constants.LabelNegative]
         label_substitutions = {1: negative_label, 2: negative_label, 3: positive_label, 4: positive_label, 5: positive_label}
-        train_df.replace(label_substitutions, inplace=True)
-        test_df.replace(label_substitutions, inplace=True)
+        train_df[constants.ColumnLabel].replace(label_substitutions, inplace=True)
+        test_df[constants.ColumnLabel].replace(label_substitutions, inplace=True)
     return train_df, test_df
 
-def load_all_features(dataset, max_rows=None, binary_labels=False):
+def load_all_features(dataset, max_rows=None, binary_labels=True):
     feature_dfs = {}
     for feature in utils.get_all_features():
         feature_dfs[feature] = load_feature(dataset, feature, max_rows=max_rows, binary_labels=binary_labels)
