@@ -3,11 +3,14 @@ import seaborn as sns
 from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score
 import numpy as np
 import pandas as pd
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, ConfusionMatrixDisplay
+import time
 
+from utils import utils
 from utils import constants
+from visualization import visualization
 
 get_accuracy = lambda df, classifier: accuracy_score(df[constants.ColumnLabel], classifier.predict(df.drop([constants.ColumnLabel], axis=1)))
 
@@ -58,3 +61,114 @@ def kfold_parameter_tune(full_train_df, k=5, parameters = [], parameter_name = "
       ax.legend(loc="upper right", bbox_to_anchor=(1.5, 1))
 
     return accuracies_df, ax
+
+def evaluate(model, train_df, test_df, evaluator_name='', print_time=True):
+    start_time = time.process_time()
+    model.fit(train_df)
+    train_time = time.process_time() - start_time
+    if print_time:
+        print("Time taken (in seconds) for training: ", train_time)
+    return EvaluatorResults(model, evaluator_name = evaluator_name, train_df=train_df, test_df=test_df, train_time=train_time, print_time=print_time)
+
+class EvaluatorResults:
+    def __pred(self, model, df, true_labels, print_time, dataset):
+        start_time = time.process_time()
+        pred_labels = model.predict(df.drop([constants.ColumnLabel], axis=1))
+        pred_time = time.process_time() - start_time
+        
+        if print_time:
+           print("Time taken (in seconds) for predicting %s dataset: %f"% (dataset, pred_time))
+
+        labels = utils.get_labels()
+        cr = classification_report(true_labels, pred_labels, output_dict=True, zero_division=0.0)
+        cm = confusion_matrix(true_labels, pred_labels, labels=[labels[constants.LabelPositive], labels[constants.LabelNegative]])
+        return pred_labels, pred_time, cr, cm
+        
+    def __init__(self, model, evaluator_name = '', train_df = None, test_df = None, train_time = None, print_time = True):
+        self.train_time = train_time
+        self.name = evaluator_name
+
+        # Train attributes
+        self.train_true_labels = None
+        self.train_pred_labels = None
+        self.train_pred_time = None
+        self.train_accuracy = None
+        self.train_classification_report = None
+        self.train_confusion_matrix = None
+
+        # Test attributes
+        self.test_true_labels = None
+        self.test_pred_labels = None
+        self.test_pred_time = None
+        self.test_accuracy = None
+        self.test_classification_report = None
+        self.test_confusion_matrix = None
+
+        if train_df is not None:
+           self.train_true_labels = train_df[constants.ColumnLabel]
+           self.train_pred_labels, self.train_pred_time, self.train_classification_report, self.train_confusion_matrix = self.__pred(
+              model, train_df, self.train_true_labels, print_time, "Train")
+           self.train_accuracy = self.train_classification_report['accuracy']
+
+        if test_df is not None:
+           self.test_true_labels = test_df[constants.ColumnLabel]
+           self.test_pred_labels, self.test_pred_time, self.test_classification_report, self.test_confusion_matrix = self.__pred(
+              model, test_df, self.test_true_labels, print_time, "Test")
+           self.test_accuracy = self.test_classification_report['accuracy']
+
+    def plot_confusion_matrix(self, isTrainDf):
+       cm = self.train_confusion_matrix if isTrainDf else self.test_confusion_matrix
+       visualization.plot_confusion_matrices(cm)
+       return
+    
+    def get_classification_report(self, isTrainDf):
+       return self.train_classification_report if isTrainDf else self.test_classification_report
+    
+    def get_accuracy(self, isTrainDf):
+       return self.train_accuracy if isTrainDf else self.test_accuracy
+    
+    def get_train_time(self):
+       return self.train_time
+    
+    def get_prediction_time(self, isTrain):
+       return self.train_pred_time if isTrain else self.test_pred_time
+    
+    def get_predictions(self, isTrain):
+       return self.train_pred_labels if isTrain else self.test_pred_labels
+
+    def get_accuracies(self):
+       return self.train_accuracy, self.test_accuracy
+    
+    def get_evaluator_name(self):
+       return self.name
+    
+    def display_classification_report(self, isTrain, include_avg=True):
+        cr = self.train_classification_report if isTrain else self.test_classification_report
+
+        labels = utils.get_labels()
+        labels_to_display_name = {str(v): k for k, v in labels.items()}
+        report = {'precision': [], 'recall': [], 'f1-score': [], 'support': []}
+        index = []
+
+        def add_row(report, row_dict):
+            for key in row_dict:
+                report[key].append(row_dict[key])
+
+        for row_key in cr:
+            if row_key != 'accuracy':
+                if row_key in labels_to_display_name:
+                    # classes
+                    index.append(labels_to_display_name[row_key])
+                    add_row(report, cr[row_key])
+                elif include_avg:
+                    # averages
+                    index.append(row_key)
+                    add_row(report, cr[row_key])
+
+        df = pd.DataFrame(report, index=index)
+        print(tabulate(df, headers='keys', tablefmt='fancy_grid'))
+        return
+
+    def plot_confusion_matrices(self):
+        visualization.plot_confusion_matrices(self.train_confusion_matrix, self.test_confusion_matrix)
+        return

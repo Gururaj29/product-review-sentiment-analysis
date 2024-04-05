@@ -11,6 +11,10 @@ FeatureGloVe = "GloVe"
 ColumnLabel = "Label"
 ColumnData = "Text"
 
+# Labels
+LabelPositive = "Positive"
+LabelNegative = "Negative"
+
 # raw data file paths
 RAW_DATA_PATH = "Data/raw_data"
 
