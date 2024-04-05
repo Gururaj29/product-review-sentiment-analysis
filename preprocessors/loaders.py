@@ -5,9 +5,9 @@ from utils import utils
 
 def load_raw_data(dataset, root_path=None, binary_labels=True):
     if dataset == constants.DatasetAmazon:
-        return load_amazon_raw_data(root_path=root_path)
+        return load_amazon_raw_data(root_path=root_path, binary_labels=binary_labels)
     if dataset == constants.DatasetYelp:
-        return load_yelp_raw_data(root_path=root_path, binary_labels=binary_labels)
+        return load_yelp_raw_data(root_path=root_path)
     return None, None
 
 def load_amazon_raw_data(root_path=None, binary_labels=True):
