@@ -18,6 +18,11 @@ def get_all_features():
 def split_train_data(train_df, split_percent=0.8):
     return np.split(train_df.sample(frac=1, random_state=42), [int(split_percent*len(train_df))])
 
+def get_predictions_output_path(root_path, model_name, dataset, run_id):
+    path = os.path.join(root_path, model_name, dataset, run_id)
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    return path
+
 def get_labels():
     return {
         constants.LabelPositive: 2,

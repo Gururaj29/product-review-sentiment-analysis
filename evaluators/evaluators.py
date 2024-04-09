@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, ConfusionMatrixDisplay
 import time
+import os
 
 from utils import utils
 from utils import constants
@@ -84,7 +85,8 @@ class EvaluatorResults:
         cm = confusion_matrix(true_labels, pred_labels, labels=[labels[constants.LabelPositive], labels[constants.LabelNegative]])
         return pred_labels, pred_time, cr, cm
         
-    def __init__(self, model, evaluator_name = '', train_df = None, test_df = None, train_time = None, print_time = True):
+    def __init__(self, model, evaluator_name = '', train_df = None, test_df = None, 
+                train_time = None, print_time = True, train_output_filepath=None, test_output_filepath=None):
         self.train_time = train_time
         self.name = evaluator_name
 
@@ -115,6 +117,15 @@ class EvaluatorResults:
            self.test_pred_labels, self.test_pred_time, self.test_classification_report, self.test_confusion_matrix = self.__pred(
               model, test_df, self.test_true_labels, print_time, "Test")
            self.test_accuracy = self.test_classification_report['accuracy']
+        
+        if train_output_filepath is not None:
+           if self.train_true_labels is not None and self.train_pred_labels is not None:
+              pd.DataFrame({"True labels": self.train_true_labels, "Predicted labels": self.train_pred_labels}).to_csv(train_output_filepath)
+
+        if test_output_filepath is not None:
+           if self.test_true_labels is not None and self.test_pred_labels is not None:
+              pd.DataFrame({"True labels": self.test_true_labels, "Predicted labels": self.test_pred_labels}).to_csv(test_output_filepath)
+           
 
     def plot_confusion_matrix(self, isTrainDf):
        cm = self.train_confusion_matrix if isTrainDf else self.test_confusion_matrix
@@ -172,3 +183,17 @@ class EvaluatorResults:
     def plot_confusion_matrices(self):
         visualization.plot_confusion_matrices(self.train_confusion_matrix, self.test_confusion_matrix)
         return
+
+def batch_evaluate(model, model_name, train_df, test_df, batch_size, root_path, dataset, run_id):
+    batch_no = 1
+    dir_path = utils.get_predictions_output_path(root_path=root_path, model_name=model_name, dataset=dataset, run_id=run_id)
+    total_batches = len(train_df) // batch_size if len(train_df)%batch_size == 0 else len(train_df)//batch_size + 1
+    for i in range(0, len(train_df), batch_size):
+        batch_train_df, batch_test_df = train_df[i: min(i+batch_size, len(train_df))], None if i >= len(test_df) else test_df[i: min(i+batch_size, len(test_df))]
+        try:
+            EvaluatorResults(model=model, train_df=batch_train_df, test_df=batch_test_df, train_time=1, train_output_filepath=os.path.join(dir_path, "train_predictions_%d.csv"%batch_no), test_output_filepath=os.path.join(dir_path, "test_predictions_%d.csv"%batch_no))
+        except Exception as e:
+           print("Exception!", e)
+        print("Completed batch#: %d, remaining: %d" %(batch_no, total_batches - batch_no))
+        batch_no += 1
+      

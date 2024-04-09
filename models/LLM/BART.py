@@ -4,8 +4,8 @@ from utils import constants
 from utils import utils
 
 class BARTZeroShotClassifier:
-  def __init__(self):
-    self.model = ZeroShotClassifier("facebook/bart-large-mnli").fit(None, [constants.LabelPositive, constants.LabelNegative])
+  def __init__(self, model="facebook/bart-large-mnli", device="cpu"):
+    self.model = ZeroShotClassifier(model, device=device).fit(None, [constants.LabelPositive, constants.LabelNegative])
   def fit(self, train_df):
     return
   def predict(self, data_df):
