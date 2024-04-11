@@ -27,12 +27,13 @@ class ZeroShotClassifier:
 
 class FineTunedClassifier:
     def __init__(self, model_path, device=-1):
-       tokenizer = AutoTokenizer.from_pretrained(__pretrained_llm, use_fast=False)
+       tokenizer = AutoTokenizer.from_pretrained(__pretrained_llm, use_fast=True)
        labels = utils.get_labels()
        self.class_to_label = {
          "LABEL_0": labels[constants.LabelNegative],
          "LABEL_1": labels[constants.LabelPositive]
        }
+       self.classifier = pipeline("text-classification", model=model_path, tokenizer=tokenizer)
     
     def fit():
         # it's already trained
