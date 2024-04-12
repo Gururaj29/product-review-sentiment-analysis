@@ -5,11 +5,13 @@ from transformers import AutoTokenizer
 from utils import constants
 from utils import utils
 
-__pretrained_llm = "distilbert/distilbert-base-uncased"
+BERT_MODEL = ""
+RoBERTa_MODEL = ""
+DISTILBERT_MODEL = "distilbert/distilbert-base-uncased"
 
 class ZeroShotClassifier:
-  def __init__(self, model=__pretrained_llm, device=-1):
-    self.classifier = pipeline("zero-shot-classification", model=model, device=device)
+  def __init__(self, model="", device=-1):
+    self.classifier = pipeline(DISTILBERT_MODEL, model=model, device=device, max_length=512, truncation=True)
   def fit(self, train_df):
     return
   def predict(self, data_df):
@@ -27,15 +29,15 @@ class ZeroShotClassifier:
 
 class FineTunedClassifier:
     def __init__(self, model_path, device=-1):
-       tokenizer = AutoTokenizer.from_pretrained(__pretrained_llm, use_fast=True)
+       tokenizer = AutoTokenizer.from_pretrained(DISTILBERT_MODEL, use_fast=True)
        labels = utils.get_labels()
        self.class_to_label = {
          "LABEL_0": labels[constants.LabelNegative],
          "LABEL_1": labels[constants.LabelPositive]
        }
-       self.classifier = pipeline("text-classification", model=model_path, tokenizer=tokenizer)
+       self.classifier = pipeline("text-classification", model=model_path, tokenizer=tokenizer, device=device, max_length=512, truncation=True)
     
-    def fit():
+    def fit(self, train_df):
         # it's already trained
         return
     
