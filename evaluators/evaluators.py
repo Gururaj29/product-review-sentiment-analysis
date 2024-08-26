@@ -72,9 +72,10 @@ def evaluate(model, train_df, test_df, evaluator_name='', print_time=True):
     return EvaluatorResults(model, evaluator_name = evaluator_name, train_df=train_df, test_df=test_df, train_time=train_time, print_time=print_time)
 
 class EvaluatorResults:
-    def __pred(self, model, df, true_labels, print_time, dataset):
+    def __pred(self, model, df, true_labels, print_time, dataset, pred_labels = None):
         start_time = time.process_time()
-        pred_labels = model.predict(df.drop([constants.ColumnLabel], axis=1))
+        if pred_labels is None:
+            pred_labels = model.predict(df.drop([constants.ColumnLabel], axis=1))
         pred_time = time.process_time() - start_time
         
         if print_time:
@@ -86,7 +87,8 @@ class EvaluatorResults:
         return pred_labels, pred_time, cr, cm
         
     def __init__(self, model, evaluator_name = '', train_df = None, test_df = None, 
-                train_time = None, print_time = True, train_output_filepath=None, test_output_filepath=None):
+                train_time = None, print_time = True, train_output_filepath=None, test_output_filepath=None,
+                train_true_labels = None, train_pred_labels = None, test_true_labels = None, test_pred_labels = None):
         self.train_time = train_time
         self.name = evaluator_name
 
@@ -107,15 +109,15 @@ class EvaluatorResults:
         self.test_confusion_matrix = None
 
         if train_df is not None:
-           self.train_true_labels = train_df[constants.ColumnLabel]
+           self.train_true_labels = train_df[constants.ColumnLabel] if train_true_labels is None else train_true_labels
            self.train_pred_labels, self.train_pred_time, self.train_classification_report, self.train_confusion_matrix = self.__pred(
-              model, train_df, self.train_true_labels, print_time, "Train")
+              model, train_df, self.train_true_labels, print_time, "Train", pred_labels=train_pred_labels)
            self.train_accuracy = self.train_classification_report['accuracy']
 
         if test_df is not None:
-           self.test_true_labels = test_df[constants.ColumnLabel]
+           self.test_true_labels = test_df[constants.ColumnLabel] if test_true_labels is None else test_true_labels
            self.test_pred_labels, self.test_pred_time, self.test_classification_report, self.test_confusion_matrix = self.__pred(
-              model, test_df, self.test_true_labels, print_time, "Test")
+              model, test_df, self.test_true_labels, print_time, "Test", pred_labels=test_pred_labels)
            self.test_accuracy = self.test_classification_report['accuracy']
         
         if train_output_filepath is not None:
@@ -196,4 +198,8 @@ def batch_evaluate(model, model_name, train_df, test_df, batch_size, root_path, 
            print("Exception!", e)
         print("Completed batch#: %d, remaining: %d" %(batch_no, total_batches - batch_no))
         batch_no += 1
-      
+
+def evaluate_results_from_outputdir(model, train_df, test_df, output_dir, evaluator_name=''):
+   train_df, test_df = [pd.read_csv(os.path.join(output_dir, i), index_col=False) for i in {"train.csv", "test.csv"}]
+   return EvaluatorResults(model, evaluator_name=evaluator_name, train_df=train_df, test_df=test_df, print_time=False,
+                train_true_labels=train_df["True labels"], train_pred_labels=train_df["Predicted labels"], test_true_labels=test_df["True labels"], test_pred_labels = test_df["Predicted labels"])
