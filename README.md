@@ -18,7 +18,6 @@ This repository contains the implementation and analysis of sentiment analysis o
 - [Conclusion](#conclusion)
 - [Future Work](#future-work)
 - [How to Run the Code](#how-to-run-the-code)
-- [References](#references)
 
 ## Introduction
 
@@ -90,6 +89,15 @@ The results indicate that LLMs, particularly BART and fine-tuned DistilBERT, out
 ## Conclusion
 
 This study demonstrates the superiority of LLMs over traditional DNNs in the sentiment analysis of e-commerce product reviews. The findings suggest that LLMs are better suited for capturing the nuanced context of reviews, especially when fine-tuned on domain-specific datasets.
+
+Accuracies of zero-shot LLM classifiers and fine-tuned DistilBERT on Amazon and Yelp
+![llm_accuracies](./results/finetuned_distilbert_performance.png)
+
+Accuracies of pre-trained and finetuned DistilBERT on Yelp and Amazon:
+![distilbert_accuracies](./results/all_distilbert.png)
+
+Complexity of LLMs used:
+![complexity](./results/number_of_parameters.png)
 
 ## Future Work
 
